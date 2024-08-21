@@ -74,26 +74,21 @@
         </RunSynchronousCommand>
         <RunSynchronousCommand wcm:action="add">
           <Order>5</Order>
-          <Description>Adds Items to Right-Click Context Menu</Description>
-          <Path>cmd.exe /c "reg.exe import "C:\Windows\Setup\Scripts\contextmenu.reg" &gt;&gt;"C:\Windows\Setup\Scripts\contextmenu.log" 2&gt;&amp;1"</Path>
-        </RunSynchronousCommand>
-        <RunSynchronousCommand wcm:action="add">
-          <Order>6</Order>
           <Description>Loads the Default User Registry Hive so Changes Can be Made to It</Description>
           <Path>reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"</Path>
         </RunSynchronousCommand>
         <RunSynchronousCommand wcm:action="add">
-          <Order>7</Order>
+          <Order>6</Order>
           <Description>Registry Entry to Execute the HKU\DefaultUser Registry Entries Script</Description>
           <Path>cmd.exe /c "C:\Windows\Setup\Scripts\defaultuser.cmd &gt;&gt;"C:\Windows\Setup\Scripts\defaultuser.log" 2&gt;&amp;1"</Path>
         </RunSynchronousCommand>
         <RunSynchronousCommand wcm:action="add">
-          <Order>8</Order>
+          <Order>7</Order>
           <Description>Registry Entry to Execute the HKCU Registry Entry Script the First Time a New User Logs In</Description>
           <Path>reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Runonce" /v "currentuser" /t REG_SZ /d "C:\Windows\Setup\Scripts\currentuser.cmd" /f</Path>
         </RunSynchronousCommand>
         <RunSynchronousCommand wcm:action="add">
-          <Order>9</Order>
+          <Order>8</Order>
           <Description>Unloads the Default User Registry Hive</Description>
           <Path>reg.exe unload "HKU\DefaultUser"</Path>
         </RunSynchronousCommand>
@@ -145,7 +140,6 @@ foreach( $file in $Document.unattend.Extensions.File ) {
   Where-Object -Property 'DisplayName' -In -Value @(
   'Microsoft.Microsoft3DViewer';
   'Microsoft.BingSearch';
-  'Microsoft.WindowsCamera';
   'Clipchamp.Clipchamp';
   'Microsoft.WindowsAlarms';
   'Microsoft.549981C3F5F10';
@@ -160,29 +154,18 @@ foreach( $file in $Document.unattend.Extensions.File ) {
   'Microsoft.MicrosoftOfficeHub';
   'Microsoft.Office.OneNote';
   'Microsoft.OutlookForWindows';
-  'Microsoft.MSPaint';
   'Microsoft.People';
   'Microsoft.Windows.Photos';
   'Microsoft.PowerAutomateDesktop';
-  'MicrosoftCorporationII.QuickAssist';
   'Microsoft.SkypeApp';
-  'Microsoft.ScreenSketch';
   'Microsoft.MicrosoftSolitaireCollection';
   'Microsoft.MicrosoftStickyNotes';
   'MSTeams';
+  'MicrosoftTeams';
   'Microsoft.Getstarted';
   'Microsoft.Todos';
-  'Microsoft.WindowsSoundRecorder';
   'Microsoft.BingWeather';
   'Microsoft.ZuneMusic';
-  'Microsoft.WindowsTerminal';
-  'Microsoft.Xbox.TCUI';
-  'Microsoft.XboxApp';
-  'Microsoft.XboxGameOverlay';
-  'Microsoft.XboxGamingOverlay';
-  'Microsoft.XboxIdentityProvider';
-  'Microsoft.XboxSpeechToTextOverlay';
-  'Microsoft.GamingApp';
   'Microsoft.YourPhone';
   'Microsoft.OneDrive';
   'Microsoft.549981C3F5F10';
@@ -196,11 +179,6 @@ Where-Object -FilterScript {
   ($_.Name -split '~')[0] -in @(
     'Browser.InternetExplorer';
     'MathRecognizer';
-    'OpenSSH.Client';
-    'Microsoft.Windows.PowerShell.ISE';
-    'App.Support.QuickAssist';
-    'App.StepsRecorder';
-    'Microsoft.Windows.WordPad';
   );
 } | Remove-WindowsCapability -Online]]>
     </File>
@@ -214,15 +192,8 @@ Where-Object -FilterScript {
   # Enables .NET Framework 3.5
   DISM /Online /Enable-Feature /FeatureName:NetFx3 /All /Source:X:\sources\sxs /LimitAccess
   
-  # Configure Maximum Password Age in Windows
-  net.exe accounts /maxpwage:UNLIMITED
-  
   # Allow Execution of PowerShell Script Files
   Set-ExecutionPolicy -Scope 'LocalMachine' -ExecutionPolicy 'RemoteSigned' -Force
-  
-  # Groups or splits svchost.exe processes based on the amount of physical memory in the system to optimize performance
-  $ram = (Get-CimInstance -ClassName Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum / 1kb
-  Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Type DWord -Value $ram -Force
   
   $autoLoggerDir = "$env:PROGRAMDATA\Microsoft\Diagnosis\ETLLogs\AutoLogger"
   If (Test-Path "$autoLoggerDir\AutoLogger-Diagtrack-Listener.etl") {
@@ -240,35 +211,6 @@ Where-Object -FilterScript {
   Remove-Item "C:\Windows\System32\OneDriveSetup.exe" -ErrorAction Continue
   Remove-Item "C:\Windows\SysWOW64\OneDriveSetup.exe" -ErrorAction Continue
    
-  # Removes Microsoft Teams
-  $TeamsPath = [System.IO.Path]::Combine($env:LOCALAPPDATA, 'Microsoft', 'Teams')
-  $TeamsUpdateExePath = [System.IO.Path]::Combine($TeamsPath, 'Update.exe')
-  
-  Stop-Process -Name "*teams*" -Force -ErrorAction Continue
-  
-  if ([System.IO.File]::Exists($TeamsUpdateExePath)) {
-      # Uninstall app
-      $proc = Start-Process $TeamsUpdateExePath "-uninstall -s" -PassThru
-      $proc.WaitForExit()
-  }
-  
-  Get-AppxPackage "*Teams*" | Remove-AppxPackage -ErrorAction Continue
-  Get-AppxPackage "*Teams*" -AllUsers | Remove-AppxPackage -AllUsers -ErrorAction Continue
-  
-  if ([System.IO.Directory]::Exists($TeamsPath)) {
-      Remove-Item $TeamsPath -Force -Recurse -ErrorAction Continue
-  }
-  
-  # Uninstall from Uninstall registry key UninstallString
-  $us = (Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object { $_.DisplayName -like '*Teams*'}).UninstallString
-  if ($us.Length -gt 0) {
-      $us = ($us.Replace('/I', '/uninstall ') + ' /quiet').Replace('  ', ' ')
-      $FilePath = ($us.Substring(0, $us.IndexOf('.exe') + 4).Trim())
-      $ProcessArgs = ($us.Substring($us.IndexOf('.exe') + 5).Trim().replace('  ', ' '))
-      $proc = Start-Process -FilePath $FilePath -Args $ProcessArgs -PassThru
-      $proc.WaitForExit()
-  }
-  
   # Disables Teredo
   $registryKeysTeredo = @(
       @{Path = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters"; Name = "DisabledComponents"; Type = "DWord"; Value = 1}
@@ -282,7 +224,6 @@ Where-Object -FilterScript {
   # Disable Scheduled Tasks
   $scheduledTasks = @(
       "Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
-      "Microsoft\Windows\Application Experience\ProgramDataUpdater",
       "Microsoft\Windows\Autochk\Proxy",
       "Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
       "Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
@@ -290,20 +231,11 @@ Where-Object -FilterScript {
       "Microsoft\Windows\Feedback\Siuf\DmClient",
       "Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload",
       "Microsoft\Windows\Windows Error Reporting\QueueReporting",
-      "Microsoft\Windows\Application Experience\MareBackup",
-      "Microsoft\Windows\Application Experience\StartupAppTask",
-      "Microsoft\Windows\Application Experience\PcaPatchDbTask",
       "Microsoft\Windows\Maps\MapsUpdateTask"
   )
   foreach ($task in $scheduledTasks) {
       schtasks /Change /TN $task /Disable
   }
-  
-  # Enable the Ultimate Performance power plan
-  powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
-  
-  # Set the Ultimate Performance power plan as active
-  powercfg -setactive e9a42b02-d5df-448d-aa00-03f14749eb61
   
   # Set Services to Manual
   Write-Output 'Set Services to Manual: Turns a bunch of system services to manual that do not need to be running all the time.'
@@ -324,13 +256,13 @@ Where-Object -FilterScript {
   Set-Service -Name 'BFE' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'BITS' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'BTAGService' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'BcastDVRUserService_*' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'BcastDVRUserService_*' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'BrokerInfrastructure' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'Browser' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'BthAvctpSvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'BthHFSrv' -StartupType Automatic -ErrorAction Continue
-  Set-Service -Name 'CDPSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'CDPUserSvc_*' -StartupType Automatic -ErrorAction Continue
+  Set-Service -Name 'CDPSvc' -StartupType Disabled -ErrorAction Continue
+  Set-Service -Name 'CDPUserSvc_*' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'COMSysApp' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'CaptureService_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'CertPropSvc' -StartupType Manual -ErrorAction Continue
@@ -340,7 +272,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'CredentialEnrollmentManagerUserSvc_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'CryptSvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'CscService' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'DPS' -StartupType Automatic -ErrorAction Continue
+  Set-Service -Name 'DPS' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'DcomLaunch' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'DcpSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'DevQueryBroker' -StartupType Manual -ErrorAction Continue
@@ -359,7 +291,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'DoSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'DsSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'DsmSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'DusmSvc' -StartupType Automatic -ErrorAction Continue
+  Set-Service -Name 'DusmSvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'EFS' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'EapHost' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'EntAppSvc' -StartupType Manual -ErrorAction Continue
@@ -369,15 +301,15 @@ Where-Object -FilterScript {
   Set-Service -Name 'Fax' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'FontCache' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'FrameServer' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'FrameServerMonitor' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'FrameServerMonitor' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'GraphicsPerfSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'HomeGroupListener' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'HomeGroupProvider' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'HvHost' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'IEEtwCollectorService' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'IKEEXT' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'IKEEXT' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'InstallService' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'InventorySvc' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'InventorySvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'IpxlatCfgSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'KeyIso' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'KtmRm' -StartupType Manual -ErrorAction Continue
@@ -388,7 +320,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'LxpSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'MSDTC' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'MSiSCSI' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'MapsBroker' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'MapsBroker' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'McpManagementService' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'MessagingService_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'MicrosoftEdgeElevationService' -StartupType Manual -ErrorAction Continue
@@ -397,7 +329,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'MsKeyboardFilter' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'NPSMSvc_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'NaturalAuthentication' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'NcaSvc' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'NcaSvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'NcbService' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'NcdAutoSetup' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'NetSetupSvc' -StartupType Manual -ErrorAction Continue
@@ -407,11 +339,11 @@ Where-Object -FilterScript {
   Set-Service -Name 'NgcCtnrSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'NgcSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'NlaSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'OneSyncSvc_*' -StartupType Automatic -ErrorAction Continue
+  Set-Service -Name 'OneSyncSvc_*' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'P9RdrService_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'PNRPAutoReg' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'PNRPsvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'PcaSvc' -StartupType Manual -ErrorAction Continue
+  #Set-Service -Name 'PcaSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'PeerDistSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'PenService_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'PerfHost' -StartupType Manual -ErrorAction Continue
@@ -423,7 +355,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'PrintNotify' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'PrintWorkflowUserSvc_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'ProfSvc' -StartupType Automatic -ErrorAction Continue
-  Set-Service -Name 'PushToInstall' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'PushToInstall' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'QWAVE' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'RasAuto' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'RasMan' -StartupType Manual -ErrorAction Continue
@@ -441,7 +373,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'SENS' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'SNMPTRAP' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'SNMPTrap' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'SSDPSRV' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'SSDPSRV' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'SamSs' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'ScDeviceEnum' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'Schedule' -StartupType Automatic -ErrorAction Continue
@@ -458,15 +390,15 @@ Where-Object -FilterScript {
   Set-Service -Name 'SmsRouter' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'Spooler' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'SstpSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'StateRepository' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'StateRepository' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'StiSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'StorSvc' -StartupType Manual -ErrorAction Continue
+  #Set-Service -Name 'StorSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'SysMain' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'SystemEventsBroker' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'TabletInputService' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'TapiSrv' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'TermService' -StartupType Automatic -ErrorAction Continue
-  Set-Service -Name 'TextInputManagementService' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'TextInputManagementService' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'Themes' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'TieringEngineService' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'TimeBroker' -StartupType Manual -ErrorAction Continue
@@ -482,9 +414,9 @@ Where-Object -FilterScript {
   Set-Service -Name 'UnistoreSvc_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'UserDataSvc_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'UserManager' -StartupType Automatic -ErrorAction Continue
-  Set-Service -Name 'UsoSvc' -StartupType Manual -ErrorAction Continue
+  #Set-Service -Name 'UsoSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'VGAuthService' -StartupType Automatic -ErrorAction Continue
-  Set-Service -Name 'VMTools' -StartupType Automatic -ErrorAction Continue
+  #Set-Service -Name 'VMTools' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'VSS' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'VacSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'VaultSvc' -StartupType Automatic -ErrorAction Continue
@@ -495,7 +427,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'WManSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'WPDBusEnum' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'WSService' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'WSearch' -StartupType Manual -ErrorAction Continue
+  #Set-Service -Name 'WSearch' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'WaaSMedicSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'WalletService' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'WarpJITSvc' -StartupType Manual -ErrorAction Continue
@@ -503,8 +435,8 @@ Where-Object -FilterScript {
   Set-Service -Name 'Wcmsvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'WcsPlugInService' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'WdNisSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'WdiServiceHost' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'WdiSystemHost' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'WdiServiceHost' -StartupType Disabled -ErrorAction Continue
+  Set-Service -Name 'WdiSystemHost' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'WebClient' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'Wecsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'WerSvc' -StartupType Manual -ErrorAction Continue
@@ -515,8 +447,8 @@ Where-Object -FilterScript {
   Set-Service -Name 'Winmgmt' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'WlanSvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'WpcMonSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'WpnService' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'WpnUserService_*' -StartupType Automatic -ErrorAction Continue
+  Set-Service -Name 'WpnService' -StartupType Disabled -ErrorAction Continue
+  Set-Service -Name 'WpnUserService_*' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'WwanSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'XblAuthManager' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'XblGameSave' -StartupType Manual -ErrorAction Continue
@@ -527,11 +459,11 @@ Where-Object -FilterScript {
   Set-Service -Name 'camsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'cbdhsvc_*' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'cloudidsvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'dcsvc' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'dcsvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'defragsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'diagnosticshub.standardcollector.service' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'diagsvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'dmwappushservice' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'dmwappushservice' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'dot3svc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'edgeupdate' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'edgeupdatem' -StartupType Manual -ErrorAction Continue
@@ -541,8 +473,8 @@ Where-Object -FilterScript {
   Set-Service -Name 'gpsvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'hidserv' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'icssvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'iphlpsvc' -StartupType Automatic -ErrorAction Continue
-  Set-Service -Name 'lfsvc' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'iphlpsvc' -StartupType Disabled -ErrorAction Continue
+  Set-Service -Name 'lfsvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'lltdsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'lmhosts' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'mpssvc' -StartupType Automatic -ErrorAction Continue
@@ -557,7 +489,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'shpamsvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'smphost' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'spectrum' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'sppsvc' -StartupType Manual -ErrorAction Continue
+  #Set-Service -Name 'sppsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'ssh-agent' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'svsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'swprv' -StartupType Manual -ErrorAction Continue
@@ -578,8 +510,8 @@ Where-Object -FilterScript {
   Set-Service -Name 'vmvss' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wbengine' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wcncsvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'webthreatdefsvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'webthreatdefusersvc_*' -StartupType Automatic -ErrorAction Continue
+  Set-Service -Name 'webthreatdefsvc' -StartupType Disabled -ErrorAction Continue
+  Set-Service -Name 'webthreatdefusersvc_*' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'wercplsupport' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wisvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wlidsvc' -StartupType Manual -ErrorAction Continue
@@ -607,10 +539,6 @@ reg.exe add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\CloudContent
 reg.exe add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f
 :: Disable Windows Spotlight on Settings
 reg.exe add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableWindowsSpotlightActiveUser /t REG_DWORD /d 1 /f
-:: Set desktop background to a normal Windows picture
-reg.exe add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v Wallpaper /t REG_SZ /d "C:\Windows\Web\Wallpaper\Windows\img0.jpg" /f
-:: Ensure the wallpaper style is set to fill (2 is for fill, 10 is for fit)
-reg.exe add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v WallpaperStyle /t REG_SZ /d "2" /f
 
 :: Prevents Dev Home Installation
 reg.exe delete "HKLM\SOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\DevHomeUpdate" /f
@@ -628,9 +556,6 @@ reg.exe add "HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Start" /v Conf
 reg.exe add "HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Start" /v ConfigureStartPins_WinningProvider /t REG_SZ /d B5292708-1619-419B-9923-E5D9F3925E71 /f
 reg.exe add "HKLM\SOFTWARE\Microsoft\PolicyManager\providers\B5292708-1619-419B-9923-E5D9F3925E71\default\Device\Start" /v ConfigureStartPins /t REG_SZ /d "{ \"pinnedList\": [] }" /f
 reg.exe add "HKLM\SOFTWARE\Microsoft\PolicyManager\providers\B5292708-1619-419B-9923-E5D9F3925E71\default\Device\Start" /v ConfigureStartPins_LastWrite /t REG_DWORD /d 1 /f
-
-:: Enable Long File Paths with Up to 32,767 Characters
-reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
 
 :: Disables News and Interests
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f
@@ -656,10 +581,6 @@ reg.exe add "HKLM\Software\Policies\Microsoft\Windows\Windows Search" /v AllowCo
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableActivityFeed /t REG_DWORD /d 0 /f
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v PublishUserActivities /t REG_DWORD /d 0 /f
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v UploadUserActivities /t REG_DWORD /d 0 /f
-
-:: Disables Hibernation
-reg.exe add "HKLM\System\CurrentControlSet\Control\Session Manager\Power" /v HibernateEnabled /t REG_DWORD /d 0 /f
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings" /v ShowHibernateOption /t REG_DWORD /d 0 /f
 
 :: Disables Location Tracking
 reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" /v Value /t REG_SZ /d Deny /f
@@ -692,13 +613,6 @@ reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance" /v fAllowT
 :: Search Windows Update for Drivers First
 reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" /v SearchOrderConfig /t REG_DWORD /d 1 /f
 
-:: Gives Multimedia Applications like Games and Video Editing a Higher Priority
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 0 /f
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f
-
-:: Controls whether the memory page file is cleared at shutdown. Value 0 means it will not be cleared, speeding up shutdown.
-reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v ClearPageFileAtShutdown /t REG_DWORD /d 0 /f
-
 :: Enables NDU (Network Diagnostic Usage) Service on Startup
 reg.exe add "HKLM\SYSTEM\ControlSet001\Services\Ndu" /v Start /t REG_DWORD /d 2 /f
 
@@ -708,24 +622,12 @@ reg.exe add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v 
 :: Hides the Meet Now Button on the Taskbar
 reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v HideSCAMeetNow /t REG_DWORD /d 1 /f
 
-:: Gives Graphics Cards a Higher Priority for Gaming
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f
-
-:: Gives the CPU a Higher Priority for Gaming
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v Priority /t REG_DWORD /d 6 /f
-
-:: Gives Games a higher priority in the system's scheduling
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f
-
 :: Fix Managed by your organization in Edge
 reg.exe delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /f
 
 :: Set Registry Keys to Disable Wifi-Sense
 reg.exe add "HKLM\Software\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" /v Value /t REG_DWORD /d 0 /f
 reg.exe add "HKLM\Software\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots" /v Value /t REG_DWORD /d 0 /f
-
-:: Disables Storage Sense
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 01 /t REG_DWORD /d 0 /f
 
 :: Disable Xbox GameDVR
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" /v AllowGameDVR /t REG_DWORD /d 0 /f
@@ -752,74 +654,10 @@ reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v "DisableC
 :: Disables Cloud Optimized Content
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v "DisableCloudOptimizedContent" /t REG_DWORD /d 1 /f
 
-:: DELETES SCHEDULED TASKS REGISTRY KEYS
-:: Deleting Application Compatibility Appraiser
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{0600DD45-FAF2-4131-A006-0B17509B9F78}" /f
-:: Deleting Customer Experience Improvement Program
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{4738DE7A-BCC1-4E2D-B1B0-CADB044BFA81}" /f
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{6FAC31FA-4A85-4E64-BFD5-2154FF4594B3}" /f
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{FC931F16-B50A-472E-B061-B6F79A71EF59}" /f
-:: Deleting Program Data Updater
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{0671EB05-7D95-4153-A32B-1426B9FE61DB}" /f
-:: Deleting autochk proxy
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{87BF85F4-2CE1-4160-96EA-52F554AA28A2}" /f
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{8A9C643C-3D74-4099-B6BD-9C6D170898B1}" /f
-:: Deleting QueueReporting
-reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\{E3176A65-4E44-4ED3-AA73-3283660ACB9C}" /f
-
 :: Block Automatic Upgrade from Windows 10 22H2 to Windows 11 Although Manual Upgrade is Still Allowed - Credit CyberCPU Tech
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /v "TargetReleaseVersion" /t REG_DWORD /d 1 /f
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /v "TargetReleaseVersionInfo" /t REG_SZ /d "22H2" /f
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /v "ProductVersion" /t REG_SZ /d "Windows 10" /f]]>
-    </File>
-    <!--Adds Items to Right-Click Context Menu-->
-    <File path="C:\Windows\Setup\Scripts\contextmenu.reg">
-      <![CDATA[
-    Windows Registry Editor Version 5.00
-    
-    ; Adds "Take Ownership" to the Right Click Context Menu
-    ; Created by: Shawn Brink
-    ; Created on: September 6, 2021
-    ; Updated on: January 7, 2024
-    ; Tutorial: https://www.elevenforum.com/t/add-take-ownership-to-context-menu-in-windows-11.1230/
-                
-    [-HKEY_CLASSES_ROOT\*\shell\TakeOwnership]
-    [-HKEY_CLASSES_ROOT\*\shell\runas]
-          
-    [HKEY_CLASSES_ROOT\*\shell\TakeOwnership]
-    @="Take Ownership"
-    "Extended"=-
-    "HasLUAShield"=""
-    "NoWorkingDirectory"=""
-    "NeverDefault"=""
-          
-    [HKEY_CLASSES_ROOT\*\shell\TakeOwnership\command]
-    @="powershell -windowstyle hidden -command \"Start-Process cmd -ArgumentList '/c takeown /f \\\"%1\\\" && icacls \\\"%1\\\" /grant *S-1-3-4:F /t /c /l & pause' -Verb runAs\""
-    "IsolatedCommand"= "powershell -windowstyle hidden -command \"Start-Process cmd -ArgumentList '/c takeown /f \\\"%1\\\" && icacls \\\"%1\\\" /grant *S-1-3-4:F /t /c /l & pause' -Verb runAs\""
-               
-    [HKEY_CLASSES_ROOT\Directory\shell\TakeOwnership]
-    @="Take Ownership"
-    "AppliesTo"="NOT (System.ItemPathDisplay:=\"C:\\Users\" OR System.ItemPathDisplay:=\"C:\\ProgramData\" OR System.ItemPathDisplay:=\"C:\\Windows\" OR System.ItemPathDisplay:=\"C:\\Windows\\System32\" OR System.ItemPathDisplay:=\"C:\\Program Files\" OR System.ItemPathDisplay:=\"C:\\Program Files (x86)\")"
-    "Extended"=-
-    "HasLUAShield"=""
-    "NoWorkingDirectory"=""
-    "Position"="middle"
-          
-    [HKEY_CLASSES_ROOT\Directory\shell\TakeOwnership\command]
-    @="powershell -windowstyle hidden -command \"$Y = ($null | choice).Substring(1,1); Start-Process cmd -ArgumentList ('/c takeown /f \\\"%1\\\" /r /d ' + $Y + ' && icacls \\\"%1\\\" /grant *S-1-3-4:F /t /c /l /q & pause') -Verb runAs\""
-    "IsolatedCommand"="powershell -windowstyle hidden -command \"$Y = ($null | choice).Substring(1,1); Start-Process cmd -ArgumentList ('/c takeown /f \\\"%1\\\" /r /d ' + $Y + ' && icacls \\\"%1\\\" /grant *S-1-3-4:F /t /c /l /q & pause') -Verb runAs\""
-                
-    [HKEY_CLASSES_ROOT\Drive\shell\runas]
-    @="Take Ownership"
-    "Extended"=-
-    "HasLUAShield"=""
-    "NoWorkingDirectory"=""
-    "Position"="middle"
-    "AppliesTo"="NOT (System.ItemPathDisplay:=\"C:\\\")"
-          
-    [HKEY_CLASSES_ROOT\Drive\shell\runas\command]
-    @="cmd.exe /c takeown /f \"%1\\\" /r /d y && icacls \"%1\\\" /grant *S-1-3-4:F /t /c & Pause"
-    "IsolatedCommand"="cmd.exe /c takeown /f \"%1\\\" /r /d y && icacls \"%1\\\" /grant *S-1-3-4:F /t /c & Pause"]]>
     </File>
     <!--Default User Registry Entries - This Sets Features for the Default User-->
     <File path="C:\Windows\Setup\Scripts\defaultuser.cmd">
@@ -860,12 +698,6 @@ reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Notepad" /v ShowStoreBanner /t R
 :: Removes OneDrive
 reg.exe delete "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f
 
-:: Align the taskbar to the left on Windows 11
-reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAl /t REG_DWORD /d 0 /f
-
-:: Hides Search Icon on Taskbar
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v SearchboxTaskbarMode /t REG_DWORD /d 0 /f
-
 :: Start Menu Customizations
 :: Disables Recently Added Apps and Recommendations in the Start Menu
 reg.exe add "HKU\DefaultUser\Software\Policies\Microsoft\Windows\Explorer" /v HideRecentlyAddedApps /t REG_DWORD /d 1 /f
@@ -874,16 +706,10 @@ reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\
 :: Hides or Removes People from Taskbar
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" /v PeopleBand /t REG_DWORD /d 0 /f
 
-:: Hides Task View Button on Taskbar
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f
-
 :: Hides and Removes News and Interests from PC and Taskbar
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsTaskbarViewMode /t REG_DWORD /d 2 /f
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsEnabled /t REG_DWORD /d 0 /f
 reg.exe add "HKU\DefaultUser\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" /v EnableFeeds /t REG_DWORD /d 0 /f
-
-:: Hides or Removes Notifications
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\PushNotifications" /v ToastEnabled /t REG_DWORD /d 0 /f
 
 :: Disables User Account Sync
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v SettingSyncEnabled /t REG_DWORD /d 0 /f
@@ -899,21 +725,6 @@ reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\InputPers
 :: Disables Automatic Feedback Sampling
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Feedback" /v AutoSample /t REG_DWORD /d 0 /f
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Feedback" /v ServiceEnabled /t REG_DWORD /d 0 /f
-
-:: Disables Recent Documents Tracking
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Start_TrackDocs /t REG_DWORD /d 0 /f
-
-:: Disables Background Apps
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v GlobalUserDisabled /t REG_DWORD /d 1 /f
-
-:: Disable "Let websites provide locally relevant content by accessing my language list"
-reg.exe add "HKU\DefaultUser\Control Panel\International\User Profile" /v HttpAcceptLanguageOptOut /t REG_DWORD /d 1 /f
-
-:: Disables "Let Windows track app launches to improve Start and search results"
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Start_TrackProgs /t REG_DWORD /d 0 /f
-
-:: Disables App Diagnostics
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\AppDiagnostics" /v AppDiagnosticsEnabled /t REG_DWORD /d 0 /f
 
 :: Disables Delivery Optimization
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" /v DODownloadMode /t REG_DWORD /d 0 /f
@@ -941,12 +752,6 @@ reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\
 :: Set File Explorer to Open This PC instead of Quick Access
 reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v LaunchTo /t REG_DWORD /d 1 /f
 
-:: Set Display for Performance
-reg.exe add "HKU\DefaultUser\Control Panel\Desktop" /v MenuShowDelay /t REG_DWORD /d 1 /f
-
-:: On Shutdown, Windows will automatically close any running applications
-reg.exe add "HKU\DefaultUser\Control Panel\Desktop" /v AutoEndTasks /t REG_DWORD /d 1 /f
-
 :: Sets the Mouse hover time to 400 milliseconds
 reg.exe add "HKU\DefaultUser\Control Panel\Mouse" /v MouseHoverTime /t REG_SZ /d "400" /f
 
@@ -958,24 +763,15 @@ reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\UserProfi
 
 :: Set Display for Performance
 reg.exe add "HKU\DefaultUser\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d 1 /f
-reg.exe add "HKU\DefaultUser\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 200 /f
+reg.exe add "HKU\DefaultUser\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 400 /f
 reg.exe add "HKU\DefaultUser\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 0 /f
-reg.exe add "HKU\DefaultUser\Control Panel\Keyboard" /v KeyboardDelay /t REG_DWORD /d 0 /f
 reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f
-reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 0 /f
-reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f
+reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 1 /f
+reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f
 reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarMn /t REG_DWORD /d 0 /f
-reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f
+reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f
 reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f
 reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 0 /f
-
-:: Set Registry Keys to Enable End Task With Right Click
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDeveloperSettings /t REG_DWORD /d 1 /f
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarEndTask /t REG_DWORD /d 1 /f
-
-:: Disables Notification Tray and Calendar
-reg.exe add "HKU\DefaultUser\Software\Policies\Microsoft\Windows\Explorer" /v DisableNotificationCenter /t REG_DWORD /d 1 /f
-reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\PushNotifications" /v ToastEnabled /t REG_DWORD /d 0 /f
 
 :: Set Classic Right-Click Menu for Windows 11
 reg.exe add "HKU\DefaultUser\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /ve /t REG_SZ /d "" /f
@@ -990,9 +786,6 @@ reg.exe add "HKU\DefaultUser\System\GameConfigStore" /v GameDVR_EFSEFeatureFlags
 :: Disables Bing Search in Start Menu
 reg.exe add "HKU\DefaultUser\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f
 
-:: Enables NumLock on Startup
-reg.exe add "HKU\DefaultUser\Control Panel\Keyboard" /v InitialKeyboardIndicators /t REG_SZ /d 2 /f
-
 :: Disables Mouse Acceleration
 reg.exe add "HKU\DefaultUser\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d "0" /f
 reg.exe add "HKU\DefaultUser\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d "0" /f
@@ -1002,23 +795,8 @@ reg.exe add "HKU\DefaultUser\Control Panel\Mouse" /v MouseThreshold2 /t REG_SZ /
 reg.exe add "HKU\DefaultUser\Control Panel\Accessibility\StickyKeys" /v Flags /t REG_SZ /d "506" /f
 reg.exe add "HKU\DefaultUser\Control Panel\Accessibility\StickyKeys" /v HotkeyFlags /t REG_SZ /d "58" /f
 
-:: Disables Snap Assist Flyout
-reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v SnapAssist /t REG_DWORD /d 0 /f
-
 :: Enables Show File Extensions
 reg.exe add "HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v HideFileExt /t REG_DWORD /d 0 /f
-
-:: Enables Dark Mode
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v AppsUseLightTheme /t REG_DWORD /d 0 /f
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v ColorPrevalence /t REG_DWORD /d 0 /f
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 1 /f
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v SystemUsesLightTheme /t REG_DWORD /d 0 /f
-
-:: WINDOWS 10 TASKBAR CUSTOMIZATIONS
-:: Makes Taskbar Transparent in Windows 10
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarAcrylicOpacity" /t REG_DWORD /d 0 /f
-:: Makes Taskbar Small in Windows 10
-reg.exe add "HKU\DefaultUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarSmallIcons" /t REG_DWORD /d 1 /f
 
 :: Restore Windows Photo Viewer and Set as Default Program for Image Files
 :: Restore Windows Photo Viewer
@@ -1097,12 +875,6 @@ reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Notepad" /v ShowStoreBanner /t
 :: Removes OneDrive
 reg.exe delete "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f
 
-:: Align the taskbar to the left on Windows 11
-reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAl /t REG_DWORD /d 0 /f
-
-:: Hides Search Icon on Taskbar
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v SearchboxTaskbarMode /t REG_DWORD /d 0 /f
-
 :: Start Menu Customizations 
 :: Disables Recently Added Apps and Recommendations in the Start Menu
 reg.exe add "HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Explorer" /v HideRecentlyAddedApps /t REG_DWORD /d 1 /f
@@ -1111,16 +883,10 @@ reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explore
 :: Hides or Removes People from Taskbar
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" /v PeopleBand /t REG_DWORD /d 0 /f
 
-:: Hides Task View Button on Taskbar
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f
-
 :: Hides and Removes News and Interests from PC and Taskbar
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsTaskbarViewMode /t REG_DWORD /d 2 /f
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" /v ShellFeedsEnabled /t REG_DWORD /d 0 /f
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" /v EnableFeeds /t REG_DWORD /d 0 /f
-
-:: Hides or Removes Notifications
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\PushNotifications" /v ToastEnabled /t REG_DWORD /d 0 /f
 
 :: Disables User Account Sync
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v SettingSyncEnabled /t REG_DWORD /d 0 /f
@@ -1136,21 +902,6 @@ reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\InputPe
 :: Disables Automatic Feedback Sampling
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Feedback" /v AutoSample /t REG_DWORD /d 0 /f
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Feedback" /v ServiceEnabled /t REG_DWORD /d 0 /f
-
-:: Disables Recent Documents Tracking
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Start_TrackDocs /t REG_DWORD /d 0 /f
-
-:: Disable "Let websites provide locally relevant content by accessing my language list"
-reg.exe add "HKEY_CURRENT_USER\Control Panel\International\User Profile" /v HttpAcceptLanguageOptOut /t REG_DWORD /d 1 /f
-
-:: Disables "Let Windows track app launches to improve Start and search results"
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Start_TrackProgs /t REG_DWORD /d 0 /f
-
-:: Disables Background Apps
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v GlobalUserDisabled /t REG_DWORD /d 1 /f
-
-:: Disables App Diagnostics
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\AppDiagnostics" /v AppDiagnosticsEnabled /t REG_DWORD /d 0 /f
 
 :: Disables Delivery Optimization
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" /v DODownloadMode /t REG_DWORD /d 0 /f
@@ -1178,12 +929,6 @@ reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explore
 :: Set File Explorer to Open This PC instead of Quick Access
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v LaunchTo /t REG_DWORD /d 1 /f
 
-:: Set Display for Performance
-reg.exe add "HKEY_CURRENT_USER\Control Panel\Desktop" /v MenuShowDelay /t REG_DWORD /d 1 /f
-
-:: On Shutdown, Windows will automatically close any running applications
-reg.exe add "HKEY_CURRENT_USER\Control Panel\Desktop" /v AutoEndTasks /t REG_DWORD /d 1 /f
-
 :: Sets the Mouse hover time to 400 milliseconds
 reg.exe add "HKEY_CURRENT_USER\Control Panel\Mouse" /v MouseHoverTime /t REG_SZ /d "400" /f
 
@@ -1195,24 +940,15 @@ reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\UserPro
 
 :: Set Display for Performance
 reg.exe add "HKEY_CURRENT_USER\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d 1 /f
-reg.exe add "HKEY_CURRENT_USER\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 200 /f
+reg.exe add "HKEY_CURRENT_USER\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 400 /f
 reg.exe add "HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 0 /f
-reg.exe add "HKEY_CURRENT_USER\Control Panel\Keyboard" /v KeyboardDelay /t REG_DWORD /d 0 /f
 reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f
-reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 0 /f
-reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f
+reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 1 /f
+reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f
 reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarMn /t REG_DWORD /d 0 /f
-reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f
+reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f
 reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f
 reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 0 /f
-
-:: Set Registry Keys to Enable End Task With Right Click
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDeveloperSettings /t REG_DWORD /d 1 /f
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarEndTask /t REG_DWORD /d 1 /f
-
-:: Disables Notification Tray and Calendar
-reg.exe add "HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Explorer" /v DisableNotificationCenter /t REG_DWORD /d 1 /f
-reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\PushNotifications" /v ToastEnabled /t REG_DWORD /d 0 /f
 
 :: Set Classic Right-Click Menu for Windows 11
 reg.exe add "HKEY_CURRENT_USER\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /ve /t REG_SZ /d "" /f
@@ -1227,9 +963,6 @@ reg.exe add "HKEY_CURRENT_USER\System\GameConfigStore" /v GameDVR_EFSEFeatureFla
 :: Disables Bing Search in Start Menu
 reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f
 
-:: Enables NumLock on Startup
-reg.exe add "HKEY_CURRENT_USER\Control Panel\Keyboard" /v InitialKeyboardIndicators /t REG_SZ /d 2 /f
-
 :: Disables Mouse Acceleration
 reg.exe add "HKEY_CURRENT_USER\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d "0" /f
 reg.exe add "HKEY_CURRENT_USER\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d "0" /f
@@ -1239,23 +972,8 @@ reg.exe add "HKEY_CURRENT_USER\Control Panel\Mouse" /v MouseThreshold2 /t REG_SZ
 reg.exe add "HKEY_CURRENT_USER\Control Panel\Accessibility\StickyKeys" /v Flags /t REG_SZ /d "506" /f
 reg.exe add "HKEY_CURRENT_USER\Control Panel\Accessibility\StickyKeys" /v HotkeyFlags /t REG_SZ /d "58" /f
 
-:: Disables Snap Assist Flyout
-reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v SnapAssist /t REG_DWORD /d 0 /f
-
 :: Enables Show File Extensions
 reg.exe add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v HideFileExt /t REG_DWORD /d 0 /f
-
-:: Enables Dark Mode
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v AppsUseLightTheme /t REG_DWORD /d 0 /f
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v ColorPrevalence /t REG_DWORD /d 0 /f
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 1 /f
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v SystemUsesLightTheme /t REG_DWORD /d 0 /f
-
-:: WINDOWS 10 TASKBAR CUSTOMIZATIONS
-:: Makes Taskbar Transparent in Windows 10
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarAcrylicOpacity" /t REG_DWORD /d 0 /f
-:: Makes Taskbar Small in Windows 10
-reg.exe add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarSmallIcons" /t REG_DWORD /d 1 /f
 
 :: Don't Update Last Access Time Stamp - This Can Improve File System Performance
 fsutil.exe behavior set disableLastAccess 1
