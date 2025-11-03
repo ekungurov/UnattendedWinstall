@@ -368,7 +368,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'MixedRealityOpenXRSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'MpsSvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'MsKeyboardFilter' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'NPSMSvc_*' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'NPSMSvc_*' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'NaturalAuthentication' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'NcaSvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'NcbService' -StartupType Manual -ErrorAction Continue
@@ -402,7 +402,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'RasMan' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'RemoteAccess' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'RemoteRegistry' -StartupType Disabled -ErrorAction Continue
-  Set-Service -Name 'RetailDemo' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'RetailDemo' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'RmSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'RpcEptMapper' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'RpcLocator' -StartupType Manual -ErrorAction Continue
@@ -428,7 +428,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'SharedAccess' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'SharedRealitySvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'ShellHWDetection' -StartupType Automatic -ErrorAction Continue
-  Set-Service -Name 'SmsRouter' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'SmsRouter' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'Spooler' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'SstpSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'StateRepository' -StartupType Automatic -ErrorAction Continue
@@ -495,7 +495,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'XblGameSave' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'XboxGipSvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'XboxNetApiSvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'autotimesvc' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'autotimesvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'bthserv' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'camsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'cbdhsvc_*' -StartupType Manual -ErrorAction Continue
@@ -514,7 +514,7 @@ Where-Object -FilterScript {
   Set-Service -Name 'gpsvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'hidserv' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'icssvc' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'iphlpsvc' -StartupType Disabled -ErrorAction Continue
+  Set-Service -Name 'iphlpsvc' -StartupType Automatic -ErrorAction Continue
   Set-Service -Name 'lfsvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'lltdsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'lmhosts' -StartupType Manual -ErrorAction Continue
@@ -554,13 +554,15 @@ Where-Object -FilterScript {
   Set-Service -Name 'webthreatdefsvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'webthreatdefusersvc_*' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'wercplsupport' -StartupType Manual -ErrorAction Continue
-  Set-Service -Name 'wisvc' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'wisvc' -StartupType Disabled -ErrorAction Continue
   Set-Service -Name 'wlidsvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wlpasvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wmiApSrv' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'workfolderssvc' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wuauserv' -StartupType Manual -ErrorAction Continue
   Set-Service -Name 'wudfsvc' -StartupType Manual -ErrorAction Continue
+  Set-Service -Name 'whesvc' -StartupType Disabled -ErrorAction Continue
+  Set-Service -Name 'WSAIFabricSvc' -StartupType Disabled -ErrorAction Continue
   
   Stop-Transcript]]>
     </File>
