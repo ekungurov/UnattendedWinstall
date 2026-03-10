@@ -209,31 +209,6 @@ Where-Object -FilterScript {
   $logFile = "C:\Windows\Setup\Scripts\wintweaks.log"
   Start-Transcript -Path $logFile
           
-  # Create WinUtil shortcut on the desktop (sourced from CTT MicroWin)
-  $desktopPath = "C:\Users\Default\Desktop"
-  # Specify the target PowerShell command
-  $command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'irm https://christitus.com/win | iex'"
-  # Specify the path for the shortcut
-  $shortcutPath = Join-Path $desktopPath 'LAUNCH-CTT-WINUTIL.lnk'
-  # Create a shell object
-  $shell = New-Object -ComObject WScript.Shell
-        
-  # Create a shortcut object
-  $shortcut = $shell.CreateShortcut($shortcutPath)
-           
-  # Set properties of the shortcut
-  $shortcut.TargetPath = "powershell.exe"
-  $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"$command`""
-  # Save the shortcut
-  $shortcut.Save()
-        
-  # Make the shortcut have 'Run as administrator' property on
-  $bytes = [System.IO.File]::ReadAllBytes($shortcutPath)
-  # Set byte value at position 0x15 in hex, or 21 in decimal, from the value 0x00 to 0x20 in hex
-  $bytes[0x15] = $bytes[0x15] -bor 0x20
-  [System.IO.File]::WriteAllBytes($shortcutPath, $bytes)
-    
-    
   # Enables .NET Framework 3.5
   DISM /Online /Enable-Feature /FeatureName:NetFx3 /All /Source:X:\sources\sxs /LimitAccess
   
