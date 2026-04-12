@@ -1526,6 +1526,7 @@ Write-Host "Done. See $logFile for details."
     # ============================================================================
 
     Set-RegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\BitLocker' -Name 'PreventDeviceEncryption' -Type 'DWord' -Value 1 -Description 'Prevents Windows from automatically encrypting your device with BitLocker without user consent'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name 'EnableAppUriHandlers' -Type 'DWord' -Value 0 -Description 'Enables web-to-app linking with URI handlers. Disable for better security'
     Set-RegistryValue -Path 'HKLM:\Software\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Prevents sharing WiFi passwords with contacts and automatically connecting to suggested open hotspots'
     Set-RegistryValue -Path 'HKLM:\Software\Microsoft\PolicyManager\default\WiFi\AllowAutoConnectToWiFiSenseHotspots' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Prevents sharing WiFi passwords with contacts and automatically connecting to suggested open hotspots'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting' -Name 'Disabled' -Type 'DWord' -Value 1 -Description 'Stops Windows from collecting and sending crash reports and error information to Microsoft'
@@ -1535,13 +1536,21 @@ Write-Host "Done. See $logFile for details."
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection' -Name 'MaxTelemetryAllowed' -Type 'DWord' -Value 1 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'AllowTelemetry' -Type 'DWord' -Value 0 -Description 'Send diagnostic data to Microsoft to help improve Windows and keep it secure'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'LimitDumpCollection' -Type 'DWord' -Value 1 -Description 'Limits the type of dumps that can be collected to mini dumps and triage dumps'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'LimitDiagnosticLogCollection' -Type 'DWord' -Value 1 -Description 'Limits additional diagnostic logs collection'
     Set-RegistryValue -Path 'HKLM:\Software\Policies\Microsoft\Windows\CloudContent' -Name 'DisableTailoredExperiencesWithDiagnosticData' -Type 'DWord' -Value 1 -Description 'Let Microsoft use your diagnostic data to show personalized tips, ads and recommendations'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'DoNotShowFeedbackNotifications' -Type 'DWord' -Value 1 -Description 'Let Windows ask you to provide feedback on experiences in Windows'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name 'PublishUserActivities' -Type 'DWord' -Value 0 -Description 'Allows you to jump back into what you were doing with apps, docs, or other activities on startup'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name 'UploadUserActivities' -Type 'DWord' -Value 0 -Description 'Allows you to jump back into what you were doing with apps, docs, or other activities on startup'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search' -Name 'AllowCortana' -Type 'DWord' -Value 0 -Description 'Enables Microsoft''s Cortana virtual assistant for voice commands and searches'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' -Name 'Value' -Type 'String' -Value 'Deny' -Description 'Allows Windows and apps to access your device location for location-based features'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors' -Name 'DisableLocation' -Type 'DWord' -Value 1 -Description 'Allows Windows and apps to access your device location for location-based features'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\SQMClient\Windows' -Name 'CEIPEnable' -Type 'DWord' -Value 0 -Description 'Enables or disables Customer Experience Improvement Program'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppCompat' -Name 'AITEnable' -Type 'DWord' -Value 0 -Description 'Enables or disables Application Impact Telemetry'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppCompat' -Name 'DisableInventory' -Type 'DWord' -Value 1 -Description 'Disables Application Compatibility Inventory Collector'
     Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\OneDrive' -Name 'KFMBlockOptIn' -Type 'DWord' -Value 1 -Description 'Prevents OneDrive from automatically backing up important folders (Documents, Pictures, Desktop, etc.)'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet' -Name 'SpyNetReporting' -Type 'DWord' -Value 0 -Description 'Enables or disables Microsoft Active Protection Service membership and telemetry'
+    Set-RegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet' -Name 'SubmitSamplesConsent' -Type 'DWord' -Value 2 -Description 'Enables or disables sample submission. End-users can be prompted to confirm in some cases'
 
     # ============================================================================
     # SOUND SETTINGS
@@ -1761,8 +1770,6 @@ if ($UserCustomizations) {
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.StartupApp' -Name 'Enabled' -Type 'DWord' -Value 1 -Description 'Show notifications when apps are added to your Windows startup list'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' -Name 'ShowGlobalPrompts' -Type 'DWord' -Value 1 -Description 'Show notifications when apps attempt to access your location information'
         Set-RegistryValue -Path 'HKCU:\Control Panel\Desktop' -Name 'DstNotification' -Type 'DWord' -Value 1 -Description 'Show notifications when daylight saving time changes occur'
-        Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
-        Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows Defender Security Center\Notifications' -Name 'DisableEnhancedNotifications' -Type 'DWord' -Value 0 -Description 'Show all notifications from Windows Security about threats, scans, and protection status'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.SecurityAndMaintenance' -Name 'Enabled' -Type 'DWord' -Value 1 -Description 'Show notifications from the Security and Maintenance Action Center'
 
         # ============================================================================
@@ -1781,8 +1788,10 @@ if ($UserCustomizations) {
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'PreInstalledAppsEnabled' -Type 'DWord' -Value 0 -Description 'Prevents Microsoft from automatically installing suggested apps'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'PreInstalledAppsEverEnabled' -Type 'DWord' -Value 0 -Description 'Disables tracking of whether pre-installed apps were ever enabled'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'SilentInstalledAppsEnabled' -Type 'DWord' -Value 0 -Description 'Prevents apps from being silently installed in the background'
+        Set-RegistryValue -Path 'HKCU:\Software\Policies\Microsoft\Windows\CloudContent' -Name 'DisableWindowsSpotlightFeatures' -Type 'DWord' -Value 1 -Description 'Disables Windows Spotlight features on your lock screen'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'RotatingLockScreenEnabled' -Type 'DWord' -Value 0 -Description 'Displays rotating Windows Spotlight images on your lock screen instead of a static background'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'RotatingLockScreenOverlayEnabled' -Type 'DWord' -Value 0 -Description 'Displays fun facts, tips, and tricks as an overlay on your lock screen'
+        Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'SubscribedContent-338387Enabled' -Type 'DWord' -Value 0 -Description 'Displays fun facts, tips, and tricks as an overlay on your lock screen'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'SlideshowEnabled' -Type 'DWord' -Value 0 -Description 'Enables slideshow option for lock screen background'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' -Name 'Enabled' -Type 'DWord' -Value 0 -Description 'Windows generates a unique advertising ID that apps use to track your activity and deliver personalized ads based on your behavior across different apps'
         Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo' -Name 'DisabledByGroupPolicy' -Type 'DWord' -Value 1 -Description 'Windows generates a unique advertising ID that apps use to track your activity and deliver personalized ads based on your behavior across different apps'
@@ -1800,6 +1809,7 @@ if ($UserCustomizations) {
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\CPSS\Store\InkingAndTypingPersonalization' -Name 'Value' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\Personalization\Settings' -Name 'AcceptedPrivacyPolicy' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\InputPersonalization' -Name 'RestrictImplicitTextCollection' -Type 'DWord' -Value 1 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
+        Set-RegistryValue -Path 'HKCU:\Software\Microsoft\InputPersonalization' -Name 'RestrictImplicitInkCollection' -Type 'DWord' -Value 1 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
         Set-RegistryValue -Path 'HKCU:\Software\Microsoft\InputPersonalization\TrainedDataStore' -Name 'HarvestContacts' -Type 'DWord' -Value 0 -Description 'Uses your typing history and handwriting patterns to create a custom dictionary (turning off will clear all words in your custom dictionary)'
 
         # ============================================================================
@@ -1831,13 +1841,6 @@ if ($UserCustomizations) {
 
         Set-RegistryValue -Path 'HKCU:\Control Panel\Accessibility' -Name 'Sound on Activation' -Type 'DWord' -Value 1 -Description 'Play sounds when accessibility features like StickyKeys or FilterKeys are activated'
         Set-RegistryValue -Path 'HKCU:\Control Panel\Accessibility' -Name 'Warning Sounds' -Type 'DWord' -Value 1 -Description 'Play warning sounds when attempting to activate accessibility features or when accessibility-related events occur'
-
-        # ============================================================================
-        # WINDOWS UPDATE SETTINGS
-        # ============================================================================
-
-        Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'AUOptions' -Type 'DWord' -Value 3 -Description 'Control how Windows updates are installed on your system'
-        Set-RegistryValue -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' -Name 'DODownloadMode' -Type 'DWord' -Value 0 -Description 'Share downloaded updates with other PCs on your network or the internet to reduce bandwidth usage'
 
         # ============================================================================
         # EXPLORER SETTINGS
